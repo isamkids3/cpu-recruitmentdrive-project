@@ -442,7 +442,7 @@ export default function Home() {
                 speechConfig: {
                   voiceConfig: {
                     prebuiltVoiceConfig: {
-                      voiceName: "Sadaltagar",
+                      voiceName: "Puck",
                     },
                   },
                 },
