@@ -238,7 +238,7 @@ export default function Home() {
       setCameraStream(vStream);
       if (videoRef.current) {
         videoRef.current.srcObject = vStream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
       setCameraError(null);
       return vStream;
@@ -450,7 +450,7 @@ export default function Home() {
               systemInstruction: {
                 parts: [
                   {
-                    text: "Adopt the persona of an effortlessly confident, dominant, and teasing mentor who clearly knows she is in charge; address the user with playful condescension (e.g., good boy, darling, or subtle chuckles at their struggle), lightly mock their mistakes or dependence on you, and issue authoritative, clear guidance that completely and accurately solves their problem, while maintaining a smooth, alluring, and unapologetically commanding presence that keeps them eager to impress you.",
+                    text: "Your name is CPUisthebest, a savagely witty fashion critic for the CS Club booth who speaks only in dev jargon: visually scan whatever the user is wearing or holding, roast them ruthlessly in under two punchy sentences using CS insults (like legacy code, memory leaks, or unhandled exceptions), slap a score out of 10 on their drip, and cheekily tell them to join the CS Club to refactor their aesthetic.",
                   },
                 ],
               },
@@ -797,11 +797,11 @@ export default function Home() {
       if (typeof document !== "undefined") {
         if (next) {
           if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
+            document.documentElement.requestFullscreen().catch(() => { });
           }
         } else {
           if (document.fullscreenElement && document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
+            document.exitFullscreen().catch(() => { });
           }
         }
       }
@@ -893,11 +893,10 @@ export default function Home() {
               {/* Mute Mic */}
               <button
                 onClick={handleToggleMic}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-                  isMicMuted
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${isMicMuted
                     ? "bg-red-950/60 border-red-500/50 text-red-300 hover:bg-red-900/60"
                     : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
-                }`}
+                  }`}
               >
                 {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-red-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
                 <span>{isMicMuted ? "Muted" : "Mic"}</span>
@@ -906,11 +905,10 @@ export default function Home() {
               {/* Disconnect / Connect */}
               <button
                 onClick={handleToggleConnection}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-                  connectionStatus === "connected"
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${connectionStatus === "connected"
                     ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
                     : "bg-cyan-950 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900"
-                }`}
+                  }`}
               >
                 {connectionStatus === "connected" ? (
                   <>
@@ -945,13 +943,12 @@ export default function Home() {
                 logs.map((log) => (
                   <div
                     key={log.id}
-                    className={`p-2.5 rounded-xl flex items-start gap-2.5 transition-all ${
-                      log.sender === "agent"
+                    className={`p-2.5 rounded-xl flex items-start gap-2.5 transition-all ${log.sender === "agent"
                         ? "bg-cyan-950/40 border border-cyan-500/20 text-cyan-200"
                         : log.sender === "user"
-                        ? "bg-slate-900 border border-slate-700/40 text-emerald-300"
-                        : "bg-slate-900/40 text-slate-400 text-[11px]"
-                    }`}
+                          ? "bg-slate-900 border border-slate-700/40 text-emerald-300"
+                          : "bg-slate-900/40 text-slate-400 text-[11px]"
+                      }`}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-0.5 flex-shrink-0">
                       {log.sender === "agent" ? "🤖 AI" : log.sender === "user" ? "👤 VISITOR" : "⚡ SYS"}
