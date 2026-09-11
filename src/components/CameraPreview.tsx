@@ -11,6 +11,7 @@ interface CameraPreviewProps {
   cameraActive: boolean;
   onToggleCamera: () => void;
   error?: string | null;
+  className?: string;
 }
 
 export const CameraPreview: React.FC<CameraPreviewProps> = ({
@@ -21,19 +22,25 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
   cameraActive,
   onToggleCamera,
   error,
+  className,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      }
+      videoRef.current.play().catch(() => {});
     }
-  }, [stream, videoRef]);
+  });
 
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.1)] group"
+      className={`relative flex flex-col w-full rounded-2xl md:rounded-3xl overflow-hidden bg-slate-950 border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.1)] group ${
+        className || "aspect-[4/3]"
+      }`}
     >
       {/* Video element */}
       <video

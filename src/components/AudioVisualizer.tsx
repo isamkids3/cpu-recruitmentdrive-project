@@ -10,6 +10,7 @@ interface AudioVisualizerProps {
   isUserSpeaking: boolean;
   isMicMuted: boolean;
   isConnected: boolean;
+  className?: string;
 }
 
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
@@ -19,6 +20,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   isUserSpeaking,
   isMicMuted,
   isConnected,
+  className,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -86,7 +88,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       // Draw center visualizer
       const centerY = height / 2;
 
-      if (!isConnected) {
+      if (!isConnected && micEnergy <= 0.02) {
         // Standby idle wave
         ctx.beginPath();
         ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
@@ -187,7 +189,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   }, [micAnalyser, agentAnalyser, isAgentSpeaking, isUserSpeaking, isMicMuted, isConnected]);
 
   return (
-    <div className="relative flex flex-col w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-[0_0_30px_rgba(6,182,212,0.05)]">
+    <div className={`relative flex flex-col w-full rounded-2xl md:rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-[0_0_30px_rgba(6,182,212,0.05)] ${className || ""}`}>
       {/* Top status header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900/80 border-b border-slate-800 text-xs font-mono">
         <div className="flex items-center gap-2">

@@ -14,6 +14,8 @@ import {
   Terminal,
   Zap,
   Lock,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 export interface LogItem {
@@ -36,6 +38,8 @@ interface BoothDashboardProps {
   onToggleCamera: () => void;
   onToggleConnection: () => void;
   onLockSession: () => void;
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
 }
 
 export const BoothDashboard: React.FC<BoothDashboardProps> = ({
@@ -51,6 +55,8 @@ export const BoothDashboard: React.FC<BoothDashboardProps> = ({
   onToggleCamera,
   onToggleConnection,
   onLockSession,
+  onToggleFullscreen,
+  isFullscreen,
 }) => {
   const idleProgress = Math.max(0, Math.min(100, (idleTimerSeconds / maxIdleSeconds) * 100));
 
@@ -211,6 +217,18 @@ export const BoothDashboard: React.FC<BoothDashboardProps> = ({
         >
           <Lock className="w-4 h-4" />
         </button>
+
+        {/* Fullscreen Button */}
+        {onToggleFullscreen && (
+          <button
+            onClick={onToggleFullscreen}
+            className="py-3 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 border bg-slate-900 border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/70 hover:border-cyan-400 transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+            title="Enter Fullscreen Mode"
+          >
+            <Maximize2 className="w-4 h-4 text-cyan-400" />
+            <span className="font-mono">FULLSCREEN</span>
+          </button>
+        )}
       </div>
 
       {/* Live AI Conversation & Banter Stream Ticker */}

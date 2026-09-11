@@ -5,7 +5,21 @@ import { PinAuthModal } from "@/components/PinAuthModal";
 import { CameraPreview } from "@/components/CameraPreview";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { BoothDashboard, LogItem } from "@/components/BoothDashboard";
-import { Sparkles, Shield, Zap, Bot, Users } from "lucide-react";
+import {
+  Sparkles,
+  Shield,
+  Zap,
+  Bot,
+  Users,
+  Maximize2,
+  Minimize2,
+  UserPlus,
+  Mic,
+  MicOff,
+  Power,
+  RefreshCw,
+  Lock,
+} from "lucide-react";
 
 // Converts an ArrayBuffer or Uint8Array to base64 string
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -51,6 +65,8 @@ export default function Home() {
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // Refs for tracking mutable states across async intervals/callbacks without re-triggering hooks
   const isMicMutedRef = useRef(false);
@@ -207,29 +223,37 @@ export default function Home() {
     }
   }, []);
 
+  // Initialize Camera stream explicitly (available even before connecting WebSocket)
+  const initCamera = useCallback(async () => {
+    if (cameraStreamRef.current) return cameraStreamRef.current;
+    try {
+      const vStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: "user",
+        },
+      });
+      cameraStreamRef.current = vStream;
+      setCameraStream(vStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = vStream;
+        videoRef.current.play().catch(() => {});
+      }
+      setCameraError(null);
+      return vStream;
+    } catch (camErr) {
+      console.warn("Camera init failed:", camErr);
+      setCameraError("Camera permission denied or unavailable.");
+      return null;
+    }
+  }, []);
+
   // Initialize Media Streams (Camera and Microphone)
   const initMediaStreams = useCallback(async () => {
     try {
-      // 1. Initialize Camera (Keep 4:3 ratio for 320x240 capture)
-      if (!cameraStreamRef.current) {
-        try {
-          const vStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              facingMode: "user",
-            },
-          });
-          cameraStreamRef.current = vStream;
-          if (videoRef.current) {
-            videoRef.current.srcObject = vStream;
-          }
-          setCameraError(null);
-        } catch (camErr) {
-          console.warn("Camera init failed:", camErr);
-          setCameraError("Camera permission denied or unavailable.");
-        }
-      }
+      // 1. Initialize Camera
+      await initCamera();
 
       // 2. Initialize AudioContext and Microphone with AudioWorklet
       if (!audioContextRef.current) {
@@ -701,12 +725,18 @@ export default function Home() {
     };
   }, [addLog, connectionStatus, isMicMuted, resetIdleTimer]);
 
-  // Handle PIN authentication success
+  // Automatically initialize camera preview on mount
+  useEffect(() => {
+    initCamera();
+  }, [initCamera]);
+
+  // Handle PIN authentication success (Requests mic and camera permissions, socket stays disconnected until Connect is clicked)
   const handleAuthenticated = useCallback((key: string) => {
     setApiKey(key);
     setIsAuthModalOpen(false);
-    connectWebSocket(key);
-  }, [connectWebSocket]);
+    initMediaStreams();
+    addLog("system", "🔒 PIN verified. Mic and camera active. Click 'Connect Socket' to launch Gemini Live co-host.");
+  }, [addLog, initMediaStreams]);
 
   // Lock session and re-prompt for PIN
   const handleLockSession = useCallback(() => {
@@ -760,6 +790,208 @@ export default function Home() {
     }
   }, [addLog, connectWebSocket, connectionStatus, stopAllPlayingAudio]);
 
+  // Toggle Fullscreen mode
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => {
+      const next = !prev;
+      if (typeof document !== "undefined") {
+        if (next) {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  // Listen for native escape / exit fullscreen events
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  // -------------------------------------------------------------
+  // Fullscreen Mode View (Matches Split Layout Diagram)
+  // -------------------------------------------------------------
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950 text-slate-100 flex flex-col md:flex-row gap-4 md:gap-5 p-3 md:p-5 overflow-hidden select-none">
+        {/* Background ambient lighting */}
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* LEFT COLUMN: Large Camera Vision Feed */}
+        <div className="flex-1 h-full min-h-0 min-w-0 flex flex-col relative">
+          <CameraPreview
+            stream={cameraStream || cameraStreamRef.current}
+            videoRef={videoRef}
+            isLive={connectionStatus === "connected"}
+            isCapturingFrame={isCapturingFrame}
+            cameraActive={isCameraActive}
+            onToggleCamera={handleToggleCamera}
+            error={cameraError}
+            className="w-full h-full object-cover flex-1 aspect-auto shadow-[0_0_40px_rgba(6,182,212,0.15)]"
+          />
+        </div>
+
+        {/* RIGHT COLUMN: Top Card (Chatbox/Logs + Controls) & Bottom Card (Audio Visualizer) */}
+        <div className="w-full md:w-[420px] lg:w-[480px] xl:w-[540px] h-full min-h-0 flex flex-col gap-4 shrink-0">
+          {/* TOP CARD: Chatbox, Logs, Action Buttons (Reset, Disconnect, Unfullscreen) */}
+          <div className="flex-1 min-h-0 flex flex-col rounded-3xl bg-slate-900/90 border border-slate-800 p-4 md:p-5 shadow-2xl backdrop-blur-xl overflow-hidden">
+            {/* Header with Title & Unfullscreen Button */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 p-0.5 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                  <div className="w-full h-full bg-slate-950 rounded-[6px] flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-cyan-400" />
+                  </div>
+                </div>
+                <div>
+                  <div className="font-bold text-slate-100 flex items-center gap-1.5">
+                    <span>AI BANTER & LOGS</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300">
+                      3.1 FLASH
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {logs.length} messages • {latencyMs > 0 ? `${latencyMs}ms` : "Live"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Unfullscreen Button */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:bg-slate-700/80 text-slate-200 hover:text-white flex items-center gap-1.5 transition-all text-xs font-semibold shadow-sm"
+                title="Exit Fullscreen (Esc)"
+              >
+                <Minimize2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-mono">EXIT FULLSCREEN</span>
+              </button>
+            </div>
+
+            {/* Action Buttons Row (Next Visitor / Reset, Mute Mic, Disconnect) */}
+            <div className="flex flex-wrap items-center gap-2 pt-3 pb-2 border-b border-slate-800/60">
+              {/* Next Visitor / Reset Button */}
+              <button
+                onClick={handleResetConversation}
+                disabled={connectionStatus === "disconnected"}
+                className="flex-1 min-w-[130px] py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-40 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Next Visitor</span>
+              </button>
+
+              {/* Mute Mic */}
+              <button
+                onClick={handleToggleMic}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
+                  isMicMuted
+                    ? "bg-red-950/60 border-red-500/50 text-red-300 hover:bg-red-900/60"
+                    : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                }`}
+              >
+                {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-red-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
+                <span>{isMicMuted ? "Muted" : "Mic"}</span>
+              </button>
+
+              {/* Disconnect / Connect */}
+              <button
+                onClick={handleToggleConnection}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${
+                  connectionStatus === "connected"
+                    ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                    : "bg-cyan-950 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900"
+                }`}
+              >
+                {connectionStatus === "connected" ? (
+                  <>
+                    <Power className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Disconnect</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Connect</span>
+                  </>
+                )}
+              </button>
+
+              {/* Lock Booth */}
+              <button
+                onClick={handleLockSession}
+                className="py-2 px-2.5 rounded-xl text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                title="Lock Booth"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Chatbox / Live Logs Area (Expands vertically) */}
+            <div className="flex-1 min-h-0 overflow-y-auto mt-2.5 pr-1 space-y-2 font-mono text-xs scrollbar-thin scrollbar-thumb-slate-800">
+              {logs.length === 0 ? (
+                <div className="text-slate-400 italic text-center py-10 text-xs">
+                  Waiting for passersby... Wave at the camera or speak into the mic to start banter!
+                </div>
+              ) : (
+                logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className={`p-2.5 rounded-xl flex items-start gap-2.5 transition-all ${
+                      log.sender === "agent"
+                        ? "bg-cyan-950/40 border border-cyan-500/20 text-cyan-200"
+                        : log.sender === "user"
+                        ? "bg-slate-900 border border-slate-700/40 text-emerald-300"
+                        : "bg-slate-900/40 text-slate-400 text-[11px]"
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-0.5 flex-shrink-0">
+                      {log.sender === "agent" ? "🤖 AI" : log.sender === "user" ? "👤 VISITOR" : "⚡ SYS"}
+                    </span>
+                    <p className="flex-1 leading-relaxed break-words">{log.text}</p>
+                    <span className="text-[10px] text-slate-400 flex-shrink-0">
+                      {log.timestamp}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* BOTTOM CARD: Audio Visualizer */}
+          <div className="h-44 md:h-48 shrink-0 flex flex-col rounded-3xl overflow-hidden shadow-2xl">
+            <AudioVisualizer
+              micAnalyser={micAnalyserRef.current}
+              agentAnalyser={agentAnalyserRef.current}
+              isAgentSpeaking={isAgentSpeaking}
+              isUserSpeaking={isUserSpeaking}
+              isMicMuted={isMicMuted}
+              isConnected={connectionStatus === "connected"}
+              className="h-full"
+            />
+          </div>
+        </div>
+
+        {/* PIN Authentication Security Modal */}
+        <PinAuthModal
+          isOpen={isAuthModalOpen}
+          onAuthenticated={handleAuthenticated}
+        />
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // Standard Dashboard View
+  // -------------------------------------------------------------
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-4 md:p-6 lg:p-8 relative overflow-hidden">
       {/* Background ambient lighting */}
@@ -790,7 +1022,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Status badges */}
+        {/* Status badges & Quick Fullscreen toggle */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
             <Shield className="w-3.5 h-3.5 text-cyan-400" />
@@ -805,6 +1037,15 @@ export default function Home() {
             <span>Native Barge-in:</span>
             <span className="text-emerald-400 font-bold">ACTIVE</span>
           </div>
+
+          <button
+            onClick={handleToggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 hover:bg-cyan-950/60 text-cyan-300 text-xs font-mono transition-all shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+            title="Enter Fullscreen Mode"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">FULLSCREEN</span>
+          </button>
         </div>
       </header>
 
@@ -813,7 +1054,7 @@ export default function Home() {
         {/* Left Column: Camera Vision HUD & Dual Audio Visualizer (5 Cols) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           <CameraPreview
-            stream={cameraStreamRef.current}
+            stream={cameraStream || cameraStreamRef.current}
             videoRef={videoRef}
             isLive={connectionStatus === "connected"}
             isCapturingFrame={isCapturingFrame}
@@ -833,7 +1074,6 @@ export default function Home() {
         </div>
 
         {/* Right Column: Booth Dashboard, Metrics, Banter Ticker, Controls (7 Cols) */}
-        {/* Right Column: Booth Dashboard, Metrics, Banter Ticker, Controls (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           <BoothDashboard
             connectionStatus={connectionStatus}
@@ -847,6 +1087,8 @@ export default function Home() {
             onToggleCamera={handleToggleCamera}
             onToggleConnection={handleToggleConnection}
             onLockSession={handleLockSession}
+            onToggleFullscreen={handleToggleFullscreen}
+            isFullscreen={isFullscreen}
           />
         </div>
       </div>
