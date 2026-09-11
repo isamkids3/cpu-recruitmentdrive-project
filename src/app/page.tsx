@@ -442,7 +442,7 @@ export default function Home() {
                 speechConfig: {
                   voiceConfig: {
                     prebuiltVoiceConfig: {
-                      voiceName: "Leda",
+                      voiceName: "Algenib",
                     },
                   },
                 },
@@ -894,8 +894,8 @@ export default function Home() {
               <button
                 onClick={handleToggleMic}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${isMicMuted
-                    ? "bg-red-950/60 border-red-500/50 text-red-300 hover:bg-red-900/60"
-                    : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                  ? "bg-red-950/60 border-red-500/50 text-red-300 hover:bg-red-900/60"
+                  : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
                   }`}
               >
                 {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-red-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
@@ -906,8 +906,8 @@ export default function Home() {
               <button
                 onClick={handleToggleConnection}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all ${connectionStatus === "connected"
-                    ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
-                    : "bg-cyan-950 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900"
+                  ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                  : "bg-cyan-950 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900"
                   }`}
               >
                 {connectionStatus === "connected" ? (
@@ -944,10 +944,10 @@ export default function Home() {
                   <div
                     key={log.id}
                     className={`p-2.5 rounded-xl flex items-start gap-2.5 transition-all ${log.sender === "agent"
-                        ? "bg-cyan-950/40 border border-cyan-500/20 text-cyan-200"
-                        : log.sender === "user"
-                          ? "bg-slate-900 border border-slate-700/40 text-emerald-300"
-                          : "bg-slate-900/40 text-slate-400 text-[11px]"
+                      ? "bg-cyan-950/40 border border-cyan-500/20 text-cyan-200"
+                      : log.sender === "user"
+                        ? "bg-slate-900 border border-slate-700/40 text-emerald-300"
+                        : "bg-slate-900/40 text-slate-400 text-[11px]"
                       }`}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-0.5 flex-shrink-0">
