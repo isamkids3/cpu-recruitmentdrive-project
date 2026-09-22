@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signToken, BoothTokenPayload } from "@/lib/tokens";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,9 +23,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate signed boothToken valid for 12 hours (43200 seconds)
+    const boothToken = signToken<BoothTokenPayload>({ role: "booth" }, 43200);
+
     return NextResponse.json({
       success: true,
       apiKey: apiKey.trim(),
+      boothToken,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
